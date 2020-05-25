@@ -12,17 +12,27 @@ class MessagesController < ApplicationController
 # POST /messages
   def create
 
-    key = ENV['MAILGUN_API_KEY']
-    domain = ENV['MAILGUN_API_DOMAIN']
-    url = ENV['MAILGUN_API_URL']
+    url = "#{ENV['MAILGUN_API_URL']}/#{ENV['MAILGUN_API_DOMAIN']}/messages"
+
+    payload = {
+        from: message_params[:from],
+        to: message_params[:to],
+        subject: message_params[:subject],
+        text: message_params[:text],
+    }.to_json
+
+    headers = {
+        'Authorization': "Basic #{Base64.strict_encode64('api:' + ENV['MAILGUN_API_KEY'])}",
+        'Content-Type': 'application/json; charset=utf-8'
+    }
+    begin
+      response = RestClient::Request.execute(method: :post, url: url, payload: payload, headers: headers)
+      body = JSON.parse(response.body)
+    rescue => e
+      puts "POST #{url} => NOK (#{e.inspect})"
+    end
 
     @message = Message.create!(message_params)
-
-    RestClient.post "https://api:#{key}@#{url}/#{domain}/messages",
-                    :from => message_params[:from],
-                    :to => message_params[:to],
-                    :subject => message_params[:subject],
-                    :text => message_params[:text]
     json_response(@message, :created)
   end
 
