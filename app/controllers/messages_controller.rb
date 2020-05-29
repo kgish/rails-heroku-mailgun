@@ -12,56 +12,62 @@ class MessagesController < ApplicationController
 # POST /messages
   def create
 
-    url = "#{ENV['MAILGUN_API_URL']}/#{ENV['MAILGUN_API_DOMAIN']}/messages"
+    key = ENV['MAILGUN_API_KEY']
+    domain = ENV['MAILGUN_API_DOMAIN']
+    url = ENV['MAILGUN_API_URL']
 
-    payload = {
-        from: message_params[:from],
-        to: message_params[:to],
-        subject: message_params[:subject],
-        text: message_params[:text],
-    }.to_json
-
-    headers = {
-        'Authorization': "Basic #{Base64.strict_encode64('api:' + ENV['MAILGUN_API_KEY'])}",
-        'Content-Type': 'application/json; charset=utf-8'
-    }
     begin
-      response = RestClient::Request.execute(method: :post, url: url, payload: payload, headers: headers)
-      body = JSON.parse(response.body)
-    rescue => e
-      puts "POST #{url} => NOK (#{e.inspect})"
-    end
+      response = RestClient.post "https://api:#{key}@#{url}/#{domain}/messages",
+                                 :from => message_params[:from],
+                                 :to => message_params[:to],
+                                 :subject => message_params[:subject],
+                                 :text => message_params[:text]
 
-    @message = Message.create!(message_params)
-    json_response(@message, :created)
+      raise 'Invalid response from Mailgun' if response.nil? || response.body.nil? || response.body['id'].nil? || response.body['message'].nil?
+      body = JSON.parse(response.body)
+      puts "POST '#{url}' => OK result='#{body.inspect}'"
+      @message = Message.create!(message_params.merge(mailgun_id: body['id'], mailgun_status: body['message']))
+      json_response(@message, :created)
+    rescue RestClient::Unauthorized => e
+      error = { error: '401 Unauthorized', description: 'Invalid API Key' }
+      puts "POST '#{url}' => NOK error='#{error.inspect}'"
+      json_response(error, :unauthorized)
+    rescue RestClient::NotFound => e
+      error = { error: '404 Not Found', description: 'Unknown domain' }
+      puts "POST '#{url}' => NOK error='#{error.inspect}'"
+      json_response(error, :not_found)
+    rescue => e
+      error = { error: '422 Unprocessable Entity', description: e.inspect }
+      puts "POST '#{url}' => NOK error='#{error.inspect}'"
+      json_response(error, :unprocessable_entity)
+    end
   end
+end
 
 # GET /messages/:id
-  def show
-    json_response(@message)
-  end
+def show
+  json_response(@message)
+end
 
 # PUT /messages/:id
-  def update
-    @message.update(message_params)
-    head :no_content
-  end
+def update
+  @message.update(message_params)
+  head :no_content
+end
 
 # DELETE /messages/:id
-  def destroy
-    @message.destroy
-    head :no_content
-  end
+def destroy
+  @message.destroy
+  head :no_content
+end
 
-  private
+private
 
-  def message_params
-    # whitelist params
-    params.permit(:from, :to, :subject, :text)
-  end
+def message_params
+  # whitelist params
+  params.permit(:from, :to, :subject, :text)
+end
 
-  def set_message
-    @message = Message.find(params[:id])
-  end
-
+def set_message
+  @message = Message.find(params[:id])
 end

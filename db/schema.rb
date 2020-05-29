@@ -10,12 +10,17 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_05_24_180830) do
+ActiveRecord::Schema.define(version: 2020_05_29_082654) do
+
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
 
   create_table "messages", force: :cascade do |t|
+    t.string "mailgun_id"
+    t.string "mailgun_status"
     t.string "from"
     t.string "to"
-    t.text "subject"
+    t.string "subject"
     t.text "text"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false

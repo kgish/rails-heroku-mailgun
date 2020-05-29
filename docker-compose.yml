@@ -7,9 +7,13 @@ services:
 
   web:
     build: .
-    command: bin/rails server --port 3000 --binding 0.0.0.0
+    command: bin/rails server --port 3000 --pid tmp/pids/server2.pid --binding 0.0.0.0
+    environment:
+      - DB_USER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
     ports:
-      - "3000:3000"
+      - "3001:3000"
     links:
       - db
     volumes:

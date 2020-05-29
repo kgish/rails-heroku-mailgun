@@ -1,8 +1,9 @@
 default: &default
   adapter: postgresql
   pool: 5
-  username: postgres
-  host: db
+  username:  <%= ENV['DB_USER'] %>
+  host:  <%= ENV['DB_HOST'] %>
+  port:  <%= ENV['DB_PORT'] %>
 
 development:
   <<: *default
